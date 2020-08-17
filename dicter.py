@@ -1,45 +1,55 @@
 import sys, json, spacy
 from modules import dictionary
+from modules.dictionary import Dict
+
 jsonArgFile = ''
 
 nlp = None
-dict = dictionary.Dict()
+goldenDictionary: Dict = dictionary.Dict()
 goldenWords = []
 
-### functions ------------------------------------------
+
+# functions ------------------------------------------
+
 def wordsAreEmpty(argWordsArray):
     return len(argWordsArray[0]) == 0 or len(argWordsArray[2]) == 0
+
 
 def findVocabId(word):
     return nlp.vocab[word].orth
 
-def findWordById(id):
-    return nlp.vocab[int(id)].text
+
+def findWordById(wordId):
+    return nlp.vocab[int(wordId)].text
+
 
 def saveToDisk():
     print(f'Writing dictionary to: {jsonArgFile}')
-    dict.save(jsonArgFile + '.json')
+    goldenDictionary.save(jsonArgFile + '.json')
 
-    for dictItem in dict.getItems():
-        if dictItem[1] not in goldenWords:
-            goldenWords.append(dictItem[1])
+    for dict_item in goldenDictionary.getItems():
+        if dict_item[1] not in goldenWords:
+            goldenWords.append(dict_item[1])
 
     with open(jsonArgFile + '-gw.json', 'w') as file2Write:
         file2Write.write(json.dumps(goldenWords))
 
     nlp.to_disk('vocabby')
 
+
 def loadFromDisk():
     global nlp
+    global goldenWords
     nlp = spacy.load('vocabby')
 
     print(f'Reading dictionary from: {jsonArgFile}')
-    dict.load(jsonArgFile + '.json')
+    goldenDictionary.load(jsonArgFile + '.json')
 
     with open(jsonArgFile + '-gw.json') as fileLoaded:
         goldenWords = json.load(fileLoaded)
 
-### code ------------------------------------------
+
+# code ------------------------------------------
 
 if len(sys.argv) > 1:
     jsonArgFile = sys.argv[1]
@@ -56,10 +66,10 @@ if len(jsonArgFile) > 0:
         argWordsArray = inputString.lower().split()
 
         if inputString == ':len':
-            print(f'Dictionary size: {dict.size()}')
+            print(f'Dictionary size: {goldenDictionary.size()}')
 
         elif inputString == ':print':
-            dict.print()
+            goldenDictionary.print()
 
         elif inputString == ':save':
             saveToDisk()
@@ -67,8 +77,8 @@ if len(jsonArgFile) > 0:
         elif len(argWordsArray) == 3 and argWordsArray[1] == '=' and not wordsAreEmpty(argWordsArray):
             firstWordId = findVocabId(argWordsArray[0])
             secondWordId = findVocabId(argWordsArray[2])
-            if firstWordId and secondWordId and not dict.exists(firstWordId):
-                dict.add(firstWordId, secondWordId)
+            if firstWordId and secondWordId and not goldenDictionary.exists(firstWordId):
+                goldenDictionary.add(firstWordId, secondWordId)
                 if secondWordId not in goldenWords:
                     goldenWords.append(secondWordId)
                 print('.. added')
@@ -78,15 +88,15 @@ if len(jsonArgFile) > 0:
         elif len(argWordsArray) == 3 and argWordsArray[1] == '!=' and not wordsAreEmpty(argWordsArray):
             firstWordId = findVocabId(argWordsArray[0])
             secondWordId = findVocabId(argWordsArray[2])
-            if dict.exists(firstWordId) and secondWordId == dict.findValue(firstWordId):
-                dict.delete(firstWordId)
+            if goldenDictionary.exists(firstWordId) and secondWordId == goldenDictionary.findValue(firstWordId):
+                goldenDictionary.delete(firstWordId)
                 print('.. deleted')
 
         elif len(argWordsArray) == 1 and argWordsArray[0][0] == '?':
             findValueWord = argWordsArray[0][1:].lower()
             findValueWordId = findVocabId(findValueWord)
             foundWords = []
-            for dictItem in dict.getItems():
+            for dictItem in goldenDictionary.getItems():
                 if dictItem[1] == findValueWordId:
                     foundWord = findWordById(dictItem[0])
                     foundWords.append(foundWord)
@@ -103,5 +113,4 @@ if len(jsonArgFile) > 0:
 
     saveToDisk()
 else:
-    print('Error: file is not set\r\n'\
-        'Format: dicter JSON_FILE')
+    print('Error: file is not set\r\nFormat: dicter JSON_FILE')

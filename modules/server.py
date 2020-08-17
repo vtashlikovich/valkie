@@ -1,15 +1,14 @@
 from flask import json, request
 import spacy
 from modules import dictionary
-import sys, logging
+import logging
+from typing import Dict, Any
 
 log = logging.getLogger(__name__)
 
-dict = dictionary.Dict()
+goldenDictionary = dictionary.Dict()
 goldenWordsList = []
 nlp = None
-
-WORD_HI = 'hi'
 
 mindState = {
     "status": "ok",
@@ -25,13 +24,14 @@ mindState = {
     "last_object": {}
 }
 
+
+# functions ------------------------------------------------
+
 def init(path):
-    log.info('OOOOOOK')
     global nlp
     global goldenWordsList
-    global api
     nlp = spacy.load(path + 'vocabby')
-    dict.load(path + 'dict.json')
+    goldenDictionary.load(path + 'dict.json')
 
     with open(path + 'dict-gw.json') as fileLoaded:
         goldenWordsList = json.load(fileLoaded)
@@ -39,13 +39,42 @@ def init(path):
     if len(goldenWordsList) == 0:
         log.info('goldenWordsList is empty')
 
-    log.info('OOOOOOK')
 
 def findVocabId(word):
     return nlp.vocab[word.lower()].orth
 
+
 def findWordById(id):
     return nlp.vocab[int(id)].text
+
+
+def prepareOutput(token, word):
+    wordIsGolden = word["id"] is not None and word["id"] in goldenWordsList
+
+    if token.lemma in goldenWordsList or wordIsGolden:
+        if word["text"] is not None:
+            output = '[' + word["text"].upper() + ']'
+        else:
+            output = '[' + token.lemma_.upper() + ']'
+    else:
+        output = token.lemma_
+
+    return output
+
+
+def findMatchingWord(token):
+    word = {
+        "id": None,
+        "text": None
+    }
+
+    word["id"] = goldenDictionary.findValue(token.lemma)
+
+    if word["id"] is not None:
+        word["text"] = findWordById(word["id"])
+
+    return word
+
 
 def sayRequestProcessor():
     global mindState
@@ -54,32 +83,15 @@ def sayRequestProcessor():
     output = ''
     phraseDoc = nlp(phrase)
 
-    log.info('BOOM')
-
+    # travel through the phrase, token by token
     for token in phraseDoc:
-        print('token: ' + str(token.lemma))
-        goldenWordId = dict.findValue(token.lemma)
-        print('found: ' + str(goldenWordId))
 
-        goldenWord = ''
-        if goldenWordId != None:
-            goldenWord = findWordById(goldenWordId)
+        token2Output = prepareOutput(token, findMatchingWord(token))
 
-        if output != '':
+        if token2Output != '' and output != '':
             output = output + ', '
 
-        print(goldenWordsList)
-        if token.lemma in goldenWordsList or goldenWordId in goldenWordsList:
-            if goldenWord != None:
-                output = output + '[' + goldenWord.upper() + ']'
-            else:
-                output = output + '[' + lemma_.upper() + ']'
-        else:
-            output = output + token.lemma_
+        output = output + token2Output
 
     return json.dumps(
-    {
-        "answer": output,
-        "success": True,
-        "mind": mindState
-    }), 201
+        {'answer': output, 'success': True, 'mind': mindState}), 201

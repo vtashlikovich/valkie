@@ -53,9 +53,11 @@ server.init('')
 def rootRouteProcessor():
     return api.send_static_file('index.html')
 
+
 @api.route('/api/say', methods=['POST'])
 def sayRouteProcessor():
     return server.sayRequestProcessor()
+
 
 # server start
 if __name__ == '__main__':
