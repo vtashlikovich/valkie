@@ -1,3 +1,6 @@
+from spacy.tokens import Token
+from modules import dictionary
+
 WORD_SEPARATOR = ' '
 devSAOList = [
     ['ROUTINE', 'READ', 'DATA'],
@@ -7,23 +10,30 @@ devSAOList = [
 
 class Mind:
 
-    def __init__(self, nlp, wordsDictionary, hyperonymList):
+    def __init__(self, nlp, wordsDictionary: dictionary, hyperonymList: list):
         self.nlp = nlp
         self.wordsDictionary = wordsDictionary
         self.hyperonymList = hyperonymList
         self.state = self.getDefaultState()
         self.processedPhrase = self.getDefaultPhraseStorage()
+        self.topics = []
+        self.algorithm = []
 
-    def processPhrase(self, phrase):
+    def processPhrase(self, phrase: str) -> dict or None:
         self.processedPhrase = self.getDefaultPhraseStorage()
 
         if phrase == ':clear':
             self.clear()
             return None
 
+        # ---------------
         # ACTION
+
         # replace "it", etc with current context topics
         phrase = self.processItPronoun(phrase)
+
+        # TODO: [the (det) topic] can be replaced with object/noun/topic already described
+        # TODO: [a/an topic] must create new topic
 
         self.processedPhrase['phrase'] = phrase
 
@@ -35,39 +45,39 @@ class Mind:
             # process each token
             t_lemma, t_hyperonim, t_pos, t_tag, t_dep = self.prepareTokenOutput(token, self.findMatchingWord(token))
 
-            # prepare a processed result
-            # if token2Output != '' and self.processedPhrase != '':
-            #     self.processedPhrase = self.processedPhrase + WORD_SEPARATOR
-            # self.processedPhrase = self.processedPhrase + token2Output
-            self.processedPhrase['tagged_phrase'].append((t_lemma, t_hyperonim, t_pos, t_tag, t_dep));
+            self.processedPhrase['tagged_phrase'].append((t_lemma, t_hyperonim, t_pos, t_tag, t_dep))
 
-            if t_dep in ('nsubj', 'dobj', 'compound') or t_dep == 'ROOT' and t_pos in ('VERB', 'AUX'):
+            if self.isTokenFromSAO(t_pos, t_dep):
                 phraseSAO.append(t_hyperonim)
 
+            # maintain a list of topics - nouns = files, methods, programs, data, etc.
+            # remember the last noun
             if t_pos == 'NOUN':
+                self.rememberTopic(t_hyperonim)
                 self.setLast('noun', t_lemma)
 
         self.processedPhrase['sao'] = phraseSAO
 
+        # let's find matching SAO's
+        # put determined SAO into the algorithm flow
         if phraseSAO and phraseSAO in devSAOList:
             self.processedPhrase['devsao_detected'] = True
+            self.state['algorithm'].append(phraseSAO)
 
-        #   [the (det) topic] can be replaced with object/noun/topic already described
-        #   [a/an topic] must create new topic
+        self.processedPhrase['topics'] = self.state['topics']
+        self.processedPhrase['algorithm'] = self.state['algorithm']
 
-        #   let's find matching SAO's
+        # TODO: if no matching SAO's let's find the closest ones: SA*, S*O, *AO, etc.
 
-        #   if no matching SAO's let's find the closest ones: SA*, S*O, *AO, etc.
+        # TODO: ask about previous duplicated SAO's
 
-        #   let's check what SAO may require as additional parameters
+        # TODO: let's check what SAO may require as additional attrs
 
-        #   let's create a list of missing parameters for matching SAO
+        # TODO: let's create a list of missing attrs for matching SAO
 
-        #   list of topics - nouns = files, methods, programs, data, etc.
+        # TODO: ask questions for missing attrs
 
-        #   let's ask user for parameters - that come from inbuilt SAO's
-
-    def processItPronoun(self, phrase):
+    def processItPronoun(self, phrase: str) -> str:
         newPhrase = ''
         phraseDoc = self.nlp(phrase)
         for token in phraseDoc:
@@ -83,7 +93,7 @@ class Mind:
 
         return newPhrase
 
-    def prepareTokenOutput(self, token, word):
+    def prepareTokenOutput(self, token: Token, word: dict) -> tuple:
         wordIsHyperonym = word["id"] is not None and word["id"] in self.hyperonymList
         determinedHyperonim = token.lemma_.upper()
 
@@ -99,7 +109,7 @@ class Mind:
 
         return token.lemma_, determinedHyperonim, token.pos_, token.tag_, token.dep_
 
-    def findMatchingWord(self, token):
+    def findMatchingWord(self, token: Token) -> dict:
         word = dict({
             "id": None,
             "text": None
@@ -112,21 +122,24 @@ class Mind:
 
         return word
 
-    def getDefaultPhraseStorage(self):
+    @staticmethod
+    def getDefaultPhraseStorage():
         return {
             'phrase': '',
             'tagged_phrase': [],
             'sao': [],
-            'devsao_detected': False
+            'devsao_detected': False,
+            'topics': None,
+            'algorithm': None
         }
 
-    def findVocabId(self, word):
+    def findVocabId(self, word: str) -> int:
         return self.nlp.vocab[word.lower()].orth
 
-    def findWordById(self, searchId):
+    def findWordById(self, searchId: int) -> str:
         return self.nlp.vocab[int(searchId)].text
 
-    def getProcessedPhrase(self):
+    def getProcessedPhrase(self) -> dict:
         return self.processedPhrase
 
     def saveToSession(self, session):
@@ -136,22 +149,25 @@ class Mind:
         if 'state' in session:
             self.state = session['state']
 
-    def getLast(self, key):
+    def getLast(self, key: str) -> str or None:
         result = None
         if key in self.state['last']:
             result = self.state['last'][key]
 
         return result
 
-    def setLast(self, key, value):
+    def setLast(self, key: str, value: str):
         self.state['last'][key] = value
 
-    def getDefaultState(self):
+    @staticmethod
+    def getDefaultState():
         return {
             "talker": {},
             "author": {},
             "last_sent": {},
             "cur_topic": {},
+            "topics": [],
+            "algorithm": [],
 
             "last": {
                 "noun": None,
@@ -163,3 +179,10 @@ class Mind:
 
     def clear(self):
         self.state = self.getDefaultState()
+
+    def rememberTopic(self, topicHyperonim: str):
+        if topicHyperonim is not None and topicHyperonim not in self.state['topics']:
+            self.state['topics'].append(topicHyperonim)
+
+    def isTokenFromSAO(self, t_pos: str, t_dep: str) -> bool:
+        return t_dep in ('nsubj', 'dobj', 'compound') or t_dep == 'ROOT' and t_pos in ('VERB', 'AUX');

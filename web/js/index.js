@@ -1,41 +1,50 @@
 function processForm() {
-	if ($("#phrase").val())
+	let phraseValue = $("#phrase").val();
+
+	if (phraseValue)
 		$.post('/api/say',
-			{ phrase: $("#phrase").val() },
+			{ phrase: phraseValue },
 			function(data, status, jqXHR) {
 				// console.log(data);
-				$('#status').html(JSON.stringify(data));
-				outputAnswer($("#phrase").val(), data.answer);
+				// $('#status').html(JSON.stringify(data['answer']['tagged_phrase']));
+				outputAnswer(phraseValue, data.answer);
 				$("#phrase").val('');
 			},
 			'json');
 }
 
-var currentLineIndex = 0;
-var MAX_OUTPUT_LINES = 5;
-var spanMark = '<span id="silentone"></span>';
+let currentLineIndex = 0;
+let MAX_OUTPUT_LINES = 5;
+let spanMark = '<span id="silentone"></span>';
 
 function outputAnswer(question, answerDict) {
 
-	answer = answerDict['phrase'] + '<br/>'
+	let answer = answerDict['phrase'] + '<br/>';
 
-	answer += '<span style="color:darkgray; font-size:0.8em">'
-	for (index in answerDict['tagged_phrase']) {
-		answerDict['tagged_phrase'][index][1] = '<b>' + answerDict['tagged_phrase'][index][1] + '</b>'
-		answer += '[' + answerDict['tagged_phrase'][index].slice(1) + '] '
+	answer += '<span style="color:darkgray; font-size:0.8em">';
+	for (let index in answerDict['tagged_phrase']) {
+		answerDict['tagged_phrase'][index][1] = '<b>' + answerDict['tagged_phrase'][index][1] + '</b>';
+		answer += '[' + answerDict['tagged_phrase'][index].slice(1) + '] ';
 	}
-	answer += '</span>'
-	answer += '<br/>'
+	answer += '</span>';
+	answer += '<br/>';
 	answer += (answerDict['devsao_detected']?'<span style="color:green">':'') + answerDict['sao'] +
-		(answerDict['devsao_detected']?'</span>':'') + '<br/>'
+		(answerDict['devsao_detected']?'</span>':'') + '<br/>';
 
-	$('#output').append('<span style="color: cornflowerblue">&gt; ' + question + '</span><br/>' + answer + '<br/>' + spanMark);
+	let outputDiv = $('#output');
+	outputDiv.append('<span style="color: cornflowerblue">&gt; ' + question + '</span><br/>' + answer + '<br/>' + spanMark);
 	currentLineIndex++;
 
 	// remove first line if there are too many lines already
 	if (currentLineIndex > MAX_OUTPUT_LINES) {
-		var text = $('#output').html();
+		var text = outputDiv.html();
 		var i = text.indexOf(spanMark);
 		if (i > 0) $('#output').html(text.substring(i + spanMark.length));
 	}
+
+	$('#status').append('<b>Topics:</b> ' + answerDict['topics']);
+	let algorithmText = '';
+	for (let i in answerDict['algorithm'])
+		algorithmText += (algorithmText?'<br/>':'') + (parseInt(i) + 1) + '. [' + answerDict['algorithm'][i] + ']';
+	$('#status').append('<br/><b>Algorithm:</b><br/>' + algorithmText);
 }

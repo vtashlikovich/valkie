@@ -60,6 +60,14 @@ input {
 	width: 40%
 }
 
+.big {
+	width: 60%
+}
+
+.small {
+	width: 35%
+}
+
 .pane h3, #status {
 	padding-left: 20px;
 }
