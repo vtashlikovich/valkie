@@ -2,12 +2,13 @@ import sys, json, spacy
 from modules import dictionary
 from modules.dictionary import Dict
 
+from spacy.tokens import Token, Doc
+
 jsonArgFile = ''
 
 nlp = None
-goldenDictionary: Dict = dictionary.Dict()
-goldenWords = []
-
+hyperonymDictionary: Dict = dictionary.Dict()
+hyperonyms = []
 
 # functions ------------------------------------------
 
@@ -24,29 +25,37 @@ def findWordById(wordId):
 
 
 def saveToDisk():
+    '''
+    Saves dictionary to file as JSON
+    Saves the current Spacy vocabulary
+    '''
     print(f'Writing dictionary to: {jsonArgFile}')
-    goldenDictionary.save(jsonArgFile + '.json')
+    hyperonymDictionary.save(jsonArgFile + '.json')
 
-    for dict_item in goldenDictionary.getItems():
-        if dict_item[1] not in goldenWords:
-            goldenWords.append(dict_item[1])
+    for dict_item in hyperonymDictionary.getItems():
+        if dict_item[1] not in hyperonyms:
+            hyperonyms.append(dict_item[1])
 
     with open(jsonArgFile + '-gw.json', 'w') as file2Write:
-        file2Write.write(json.dumps(goldenWords))
+        file2Write.write(json.dumps(hyperonyms))
 
     nlp.to_disk('vocabby')
 
 
 def loadFromDisk():
+    '''
+    Loads the current Spacy vocabulary
+    Loads dictionary from file in JSON format
+    '''
     global nlp
-    global goldenWords
+    global hyperonyms
     nlp = spacy.load('vocabby')
 
     print(f'Reading dictionary from: {jsonArgFile}')
-    goldenDictionary.load(jsonArgFile + '.json')
+    hyperonymDictionary.load(jsonArgFile + '.json')
 
     with open(jsonArgFile + '-gw.json') as fileLoaded:
-        goldenWords = json.load(fileLoaded)
+        hyperonyms = json.load(fileLoaded)
 
 
 # code ------------------------------------------
@@ -58,29 +67,42 @@ if len(jsonArgFile) > 0:
 
     loadFromDisk()
 
-    print('')
-    print('Format of command: word [!]= word')
-    print('Print :q/:exit/:quit to quit and save data.')
+    print('''
+:q/:exit/:quit - exit
+:len - size of the dictionary
+:print - print the whole dictionary
+:save - save dictionary and vocabulary
+:all - print all hyperonims
+hyponim = hyperonim - connects hyponim and hyperonim
+hyponim != hyperonim - disconnects hyponim and hyperonim
+?hyperonim - lists of hyponims
+        ''')
     inputString = input('> ')
+
     while inputString != ':q' and inputString != ':exit' and inputString != ':quit':
+        # processes all commands
         argWordsArray = inputString.lower().split()
 
         if inputString == ':len':
-            print(f'Dictionary size: {goldenDictionary.size()}')
+            print(f'Dictionary size: {hyperonymDictionary.size()}')
 
         elif inputString == ':print':
-            goldenDictionary.print()
+            hyperonymDictionary.print()
 
         elif inputString == ':save':
             saveToDisk()
 
+        elif inputString == ':all':
+            allHyperonims = [findWordById(wordId) for wordId in hyperonymDictionary.getHyperonims()]
+            print(allHyperonims)
+
         elif len(argWordsArray) == 3 and argWordsArray[1] == '=' and not wordsAreEmpty(argWordsArray):
             firstWordId = findVocabId(argWordsArray[0])
             secondWordId = findVocabId(argWordsArray[2])
-            if firstWordId and secondWordId and not goldenDictionary.exists(firstWordId):
-                goldenDictionary.add(firstWordId, secondWordId)
-                if secondWordId not in goldenWords:
-                    goldenWords.append(secondWordId)
+            if firstWordId and secondWordId and not hyperonymDictionary.exists(firstWordId):
+                hyperonymDictionary.add(firstWordId, secondWordId)
+                if secondWordId not in hyperonyms:
+                    hyperonyms.append(secondWordId)
                 print('.. added')
             else:
                 print('.. pair already exists')
@@ -88,15 +110,15 @@ if len(jsonArgFile) > 0:
         elif len(argWordsArray) == 3 and argWordsArray[1] == '!=' and not wordsAreEmpty(argWordsArray):
             firstWordId = findVocabId(argWordsArray[0])
             secondWordId = findVocabId(argWordsArray[2])
-            if goldenDictionary.exists(firstWordId) and secondWordId == goldenDictionary.findValue(firstWordId):
-                goldenDictionary.delete(firstWordId)
+            if hyperonymDictionary.exists(firstWordId) and secondWordId == hyperonymDictionary.findValue(firstWordId):
+                hyperonymDictionary.delete(firstWordId)
                 print('.. deleted')
 
         elif len(argWordsArray) == 1 and argWordsArray[0][0] == '?':
             findValueWord = argWordsArray[0][1:].lower()
             findValueWordId = findVocabId(findValueWord)
             foundWords = []
-            for dictItem in goldenDictionary.getItems():
+            for dictItem in hyperonymDictionary.getItems():
                 if dictItem[1] == findValueWordId:
                     foundWord = findWordById(dictItem[0])
                     foundWords.append(foundWord)

@@ -14,6 +14,10 @@ class Dict:
     def print(self):
         print(self.dictionary)
 
+    def getHyperonims(self):
+        # returns a list of unique dict values
+        return list(set(self.dictionary.values()))
+
     def add(self, key, value):
         self.dictionary[str(key)] = value
 

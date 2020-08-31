@@ -51,7 +51,7 @@ input {
 #output {
 	padding-bottom: 10px;
 	text-align: top;
-	max-height: 20em;
+	max-height: 30em;
 }
 
 .pane {

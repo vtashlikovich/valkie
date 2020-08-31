@@ -1,97 +1,42 @@
-from flask import json, request
+from flask import json, request, session
 import spacy
 from modules import dictionary
 import logging
-from typing import Dict, Any
+from modules import mind as mindModule
 
 log = logging.getLogger(__name__)
 
-goldenDictionary = dictionary.Dict()
-goldenWordsList = []
+wordsDictionary = dictionary.Dict()
+hyperonymList = []
 nlp = None
-
-mindState = {
-    "status": "ok",
-    "me": {
-        "state": "ok"
-    },
-    "talker": {},
-    "author": {},
-    "last_sentence": {},
-    "current_topic": {},
-    "last_noun": {},
-    "last_subject": {},
-    "last_object": {}
-}
 
 
 # functions ------------------------------------------------
 
-def init(path):
-    global nlp
-    global goldenWordsList
-    nlp = spacy.load(path + 'vocabby')
-    goldenDictionary.load(path + 'dict.json')
-
-    with open(path + 'dict-gw.json') as fileLoaded:
-        goldenWordsList = json.load(fileLoaded)
-
-    if len(goldenWordsList) == 0:
-        log.info('goldenWordsList is empty')
-
-
-def findVocabId(word):
-    return nlp.vocab[word.lower()].orth
-
-
-def findWordById(id):
-    return nlp.vocab[int(id)].text
-
-
-def prepareOutput(token, word):
-    wordIsGolden = word["id"] is not None and word["id"] in goldenWordsList
-
-    if token.lemma in goldenWordsList or wordIsGolden:
-        if word["text"] is not None:
-            output = '[' + word["text"].upper() + ']'
-        else:
-            output = '[' + token.lemma_.upper() + ']'
-    else:
-        output = token.lemma_
-
-    return output
-
-
-def findMatchingWord(token):
-    word = {
-        "id": None,
-        "text": None
-    }
-
-    word["id"] = goldenDictionary.findValue(token.lemma)
-
-    if word["id"] is not None:
-        word["text"] = findWordById(word["id"])
-
-    return word
-
-
 def sayRequestProcessor():
-    global mindState
     global nlp
-    phrase = request.form.get('phrase')
-    output = ''
-    phraseDoc = nlp(phrase)
+    mind = mindModule.Mind(nlp, wordsDictionary, hyperonymList)
 
-    # travel through the phrase, token by token
-    for token in phraseDoc:
+    mind.loadFromSession(session)
 
-        token2Output = prepareOutput(token, findMatchingWord(token))
+    mind.processPhrase(request.form.get('phrase'))
 
-        if token2Output != '' and output != '':
-            output = output + ', '
-
-        output = output + token2Output
+    mind.saveToSession(session)
 
     return json.dumps(
-        {'answer': output, 'success': True, 'mind': mindState}), 201
+        {'answer': mind.getProcessedPhrase(), 'success': True}), 201
+
+
+# -------
+
+def init(path):
+    global nlp
+    global hyperonymList
+    nlp = spacy.load(path + 'vocabby')
+    wordsDictionary.load(path + 'dict.json')
+
+    with open(path + 'dict-gw.json') as fileLoaded:
+        hyperonymList = json.load(fileLoaded)
+
+    if len(hyperonymList) == 0:
+        log.info('hyperonymList is empty')
