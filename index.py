@@ -21,7 +21,8 @@ def rootRouteProcessor():
 
 @api.route('/api/say', methods=['POST'])
 def sayRouteProcessor():
-    return server.sayRequestProcessor()
+    global api
+    return server.sayRequestProcessor(api)
 
 
 # server start

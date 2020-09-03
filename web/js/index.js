@@ -7,6 +7,7 @@ function processForm() {
 			function(data, status, jqXHR) {
 				// console.log(data);
 				// $('#status').html(JSON.stringify(data['answer']['tagged_phrase']));
+				$('#status').html('');
 				outputAnswer(phraseValue, data.answer);
 				$("#phrase").val('');
 			},
@@ -47,4 +48,9 @@ function outputAnswer(question, answerDict) {
 	for (let i in answerDict['algorithm'])
 		algorithmText += (algorithmText?'<br/>':'') + (parseInt(i) + 1) + '. [' + answerDict['algorithm'][i] + ']';
 	$('#status').append('<br/><b>Algorithm:</b><br/>' + algorithmText);
+
+	if (answerDict['questions']) {
+		qList = answerDict['questions'];
+		$('#status').append('<br/><b>Questions:</b><br/>' + qList);
+	}
 }

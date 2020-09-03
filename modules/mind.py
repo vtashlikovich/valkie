@@ -1,16 +1,15 @@
 from spacy.tokens import Token
 from modules import dictionary
+from modules import sao as SAO
+import logging
 
+log = logging.getLogger(__name__)
 WORD_SEPARATOR = ' '
-devSAOList = [
-    ['ROUTINE', 'READ', 'DATA'],
-    ['ROUTINE', 'PRINT', 'DATA'],
-]
 
 
 class Mind:
 
-    def __init__(self, nlp, wordsDictionary: dictionary, hyperonymList: list):
+    def __init__(self, nlp, wordsDictionary: dictionary, hyperonymList: list, api: object):
         self.nlp = nlp
         self.wordsDictionary = wordsDictionary
         self.hyperonymList = hyperonymList
@@ -18,6 +17,7 @@ class Mind:
         self.processedPhrase = self.getDefaultPhraseStorage()
         self.topics = []
         self.algorithm = []
+        self.flask = api
 
     def processPhrase(self, phrase: str) -> dict or None:
         self.processedPhrase = self.getDefaultPhraseStorage()
@@ -60,22 +60,36 @@ class Mind:
 
         # let's find matching SAO's
         # put determined SAO into the algorithm flow
-        if phraseSAO and phraseSAO in devSAOList:
+        phraseSAOTuple = tuple(phraseSAO)
+        if phraseSAOTuple in SAO.SAOList:
             self.processedPhrase['devsao_detected'] = True
             self.state['algorithm'].append(phraseSAO)
 
         self.processedPhrase['topics'] = self.state['topics']
         self.processedPhrase['algorithm'] = self.state['algorithm']
 
-        # TODO: if no matching SAO's let's find the closest ones: SA*, S*O, *AO, etc.
+        # low TODO: if no matching SAO's let's find the closest ones: SA*, S*O, *AO, etc.
 
-        # TODO: ask about previous duplicated SAO's
+        # low TODO: ask about previous duplicated SAO's in algorithm - what to do?
 
-        # TODO: let's check what SAO may require as additional attrs
+        # let's check what SAO may require as additional attrs
+        if phraseSAOTuple in SAO.SAOList:
+            attrsStorage = SAO.attributes[phraseSAOTuple]
 
-        # TODO: let's create a list of missing attrs for matching SAO
+            questions = ''
+            # loop through words
+            for word in attrsStorage:
+                for attr in attrsStorage[word]:
+                    if self.getSAOAttribute(phraseSAOTuple, word, attr) is None:
+                        # high TODO: determine which attributes are in the sentence
 
-        # TODO: ask questions for missing attrs
+                        # let's create a list of missing attrs for matching SAO
+                        questions += ', ' + self.askQuestion(word, attr, attrsStorage[word][attr])
+
+            # ask questions for missing attrs
+            self.processedPhrase['questions'] = questions
+
+        # low TODO: let user later to change attr
 
     def processItPronoun(self, phrase: str) -> str:
         newPhrase = ''
@@ -168,6 +182,8 @@ class Mind:
             "cur_topic": {},
             "topics": [],
             "algorithm": [],
+            "questions": [],
+            'sao_attrs': [],
 
             "last": {
                 "noun": None,
@@ -176,6 +192,14 @@ class Mind:
                 "object": None,
             }
         }
+
+    def getSAOAttribute(self, sao: tuple, word: str, attribute: str) -> str or None:
+        result = None
+        if self.state['sao_attrs'] and sao in self.state['sao_attrs'] and word in self.state['sao_attrs'][tuple] \
+            and attribute in self.state['sao_attrs'][tuple][word]:
+            result = self.state['sao_attrs'][tuple][word][attribute]
+
+        return result
 
     def clear(self):
         self.state = self.getDefaultState()
@@ -186,3 +210,15 @@ class Mind:
 
     def isTokenFromSAO(self, t_pos: str, t_dep: str) -> bool:
         return t_dep in ('nsubj', 'dobj', 'compound') or t_dep == 'ROOT' and t_pos in ('VERB', 'AUX');
+
+    def askQuestion(self, word, attribute, options: dict or str):
+        optionsList = ''
+        if type(options) is str:
+            optionsList = options
+        elif type(options) is dict:
+            optionsList = ', '.join(list(options.keys()))
+
+        return word[0] + word[1:].lower() + ' ' + attribute.lower() + '? (options: ' + str(optionsList) + ')'
+
+    def log(self, string):
+        self.flask.logger.info('> ' + string)

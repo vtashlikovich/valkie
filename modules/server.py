@@ -13,9 +13,9 @@ nlp = None
 
 # functions ------------------------------------------------
 
-def sayRequestProcessor():
+def sayRequestProcessor(api: object):
     global nlp
-    mind = mindModule.Mind(nlp, wordsDictionary, hyperonymList)
+    mind = mindModule.Mind(nlp, wordsDictionary, hyperonymList, api)
 
     mind.loadFromSession(session)
 
