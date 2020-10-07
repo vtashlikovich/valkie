@@ -13,30 +13,31 @@ nlp = None
 
 # functions ------------------------------------------------
 
+
 def sayRequestProcessor(api: object):
     global nlp
     mind = mindModule.Mind(nlp, wordsDictionary, hyperonymList, api)
 
     mind.loadFromSession(session)
 
-    mind.processPhrase(request.form.get('phrase'))
+    mind.analyzePhrase(request.form.get("phrase"))
 
     mind.saveToSession(session)
 
-    return json.dumps(
-        {'answer': mind.getProcessedPhrase(), 'success': True}), 201
+    return json.dumps({"answer": mind.getProcessedPhrase(), "success": True}), 201
 
 
 # -------
 
+
 def init(path):
     global nlp
     global hyperonymList
-    nlp = spacy.load(path + 'vocabby')
-    wordsDictionary.load(path + 'dict.json')
+    nlp = spacy.load(path + "vocabby")
+    wordsDictionary.load(path + "dict.json")
 
-    with open(path + 'dict-gw.json') as fileLoaded:
+    with open(path + "dict-gw.json") as fileLoaded:
         hyperonymList = json.load(fileLoaded)
 
     if len(hyperonymList) == 0:
-        log.info('hyperonymList is empty')
+        log.info("hyperonymList is empty")

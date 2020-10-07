@@ -1,7 +1,7 @@
 import sys, json
 
-class Dict:
 
+class Dict:
     def __init__(self):
         self.dictionary = {}
 
@@ -40,5 +40,5 @@ class Dict:
             self.dictionary = json.load(fileLoaded)
 
     def save(self, fileName):
-        with open(fileName, 'w') as file2Write:
+        with open(fileName, "w") as file2Write:
             file2Write.write(json.dumps(self.dictionary))

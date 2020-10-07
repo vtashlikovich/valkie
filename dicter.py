@@ -4,13 +4,14 @@ from modules.dictionary import Dict
 
 from spacy.tokens import Token, Doc
 
-jsonArgFile = ''
+jsonArgFile = ""
 
 nlp = None
 hyperonymDictionary: Dict = dictionary.Dict()
 hyperonyms = []
 
 # functions ------------------------------------------
+
 
 def wordsAreEmpty(argWordsArray):
     return len(argWordsArray[0]) == 0 or len(argWordsArray[2]) == 0
@@ -25,36 +26,36 @@ def findWordById(wordId):
 
 
 def saveToDisk():
-    '''
+    """
     Saves dictionary to file as JSON
     Saves the current Spacy vocabulary
-    '''
-    print(f'Writing dictionary to: {jsonArgFile}')
-    hyperonymDictionary.save(jsonArgFile + '.json')
+    """
+    print(f"Writing dictionary to: {jsonArgFile}")
+    hyperonymDictionary.save(jsonArgFile + ".json")
 
     for dict_item in hyperonymDictionary.getItems():
         if dict_item[1] not in hyperonyms:
             hyperonyms.append(dict_item[1])
 
-    with open(jsonArgFile + '-gw.json', 'w') as file2Write:
+    with open(jsonArgFile + "-gw.json", "w") as file2Write:
         file2Write.write(json.dumps(hyperonyms))
 
-    nlp.to_disk('vocabby')
+    nlp.to_disk("vocabby")
 
 
 def loadFromDisk():
-    '''
+    """
     Loads the current Spacy vocabulary
     Loads dictionary from file in JSON format
-    '''
+    """
     global nlp
     global hyperonyms
-    nlp = spacy.load('vocabby')
+    nlp = spacy.load("vocabby")
 
-    print(f'Reading dictionary from: {jsonArgFile}')
-    hyperonymDictionary.load(jsonArgFile + '.json')
+    print(f"Reading dictionary from: {jsonArgFile}")
+    hyperonymDictionary.load(jsonArgFile + ".json")
 
-    with open(jsonArgFile + '-gw.json') as fileLoaded:
+    with open(jsonArgFile + "-gw.json") as fileLoaded:
         hyperonyms = json.load(fileLoaded)
 
 
@@ -67,7 +68,8 @@ if len(jsonArgFile) > 0:
 
     loadFromDisk()
 
-    print('''
+    print(
+        """
 :q/:exit/:quit - exit
 :len - size of the dictionary
 :print - print the whole dictionary
@@ -76,45 +78,62 @@ if len(jsonArgFile) > 0:
 hyponim = hyperonim - connects hyponim and hyperonim
 hyponim != hyperonim - disconnects hyponim and hyperonim
 ?hyperonim - lists of hyponims
-        ''')
-    inputString = input('> ')
+        """
+    )
+    inputString = input("> ")
 
-    while inputString != ':q' and inputString != ':exit' and inputString != ':quit':
+    while inputString != ":q" and inputString != ":exit" and inputString != ":quit":
         # processes all commands
         argWordsArray = inputString.lower().split()
 
-        if inputString == ':len':
-            print(f'Dictionary size: {hyperonymDictionary.size()}')
+        if inputString == ":len":
+            print(f"Dictionary size: {hyperonymDictionary.size()}")
 
-        elif inputString == ':print':
+        elif inputString == ":print":
             hyperonymDictionary.print()
 
-        elif inputString == ':save':
+        elif inputString == ":save":
             saveToDisk()
 
-        elif inputString == ':all':
-            allHyperonims = [findWordById(wordId) for wordId in hyperonymDictionary.getHyperonims()]
+        elif inputString == ":all":
+            allHyperonims = [
+                findWordById(wordId) for wordId in hyperonymDictionary.getHyperonims()
+            ]
             print(allHyperonims)
 
-        elif len(argWordsArray) == 3 and argWordsArray[1] == '=' and not wordsAreEmpty(argWordsArray):
+        elif (
+            len(argWordsArray) == 3
+            and argWordsArray[1] == "="
+            and not wordsAreEmpty(argWordsArray)
+        ):
             firstWordId = findVocabId(argWordsArray[0])
             secondWordId = findVocabId(argWordsArray[2])
-            if firstWordId and secondWordId and not hyperonymDictionary.exists(firstWordId):
+            if (
+                firstWordId
+                and secondWordId
+                and not hyperonymDictionary.exists(firstWordId)
+            ):
                 hyperonymDictionary.add(firstWordId, secondWordId)
                 if secondWordId not in hyperonyms:
                     hyperonyms.append(secondWordId)
-                print('.. added')
+                print(".. added")
             else:
-                print('.. pair already exists')
+                print(".. pair already exists")
 
-        elif len(argWordsArray) == 3 and argWordsArray[1] == '!=' and not wordsAreEmpty(argWordsArray):
+        elif (
+            len(argWordsArray) == 3
+            and argWordsArray[1] == "!="
+            and not wordsAreEmpty(argWordsArray)
+        ):
             firstWordId = findVocabId(argWordsArray[0])
             secondWordId = findVocabId(argWordsArray[2])
-            if hyperonymDictionary.exists(firstWordId) and secondWordId == hyperonymDictionary.findValue(firstWordId):
+            if hyperonymDictionary.exists(
+                firstWordId
+            ) and secondWordId == hyperonymDictionary.findValue(firstWordId):
                 hyperonymDictionary.delete(firstWordId)
-                print('.. deleted')
+                print(".. deleted")
 
-        elif len(argWordsArray) == 1 and argWordsArray[0][0] == '?':
+        elif len(argWordsArray) == 1 and argWordsArray[0][0] == "?":
             findValueWord = argWordsArray[0][1:].lower()
             findValueWordId = findVocabId(findValueWord)
             foundWords = []
@@ -126,13 +145,14 @@ hyponim != hyperonim - disconnects hyponim and hyperonim
             if len(foundWords) > 0:
                 print(foundWords)
             else:
-                print('.. no matches')
+                print(".. no matches")
 
         else:
-            print('.. not recognized')
+            print(".. not recognized")
 
-        inputString = input('> ')
+        inputString = input("> ")
 
     saveToDisk()
 else:
-    print('Error: file is not set\r\nFormat: dicter JSON_FILE')
+    print("Error: file is not set\r\nFormat: dicter JSON_FILE")
+

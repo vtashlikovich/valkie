@@ -8,23 +8,23 @@ loggingconf.init()
 log = logging.getLogger(__name__)
 log.debug("Logging is configured.")
 
-api = Flask(__name__,  static_url_path='', static_folder='web')
-api.secret_key = b'dfjk34889234_100'
+api = Flask(__name__, static_url_path="", static_folder="web")
+api.secret_key = b"dfjk34889234_100"
 
-server.init('')
+server.init("")
 
 # server routing
-@api.route('/')
+@api.route("/")
 def rootRouteProcessor():
-    return api.send_static_file('index.html')
+    return api.send_static_file("index.html")
 
 
-@api.route('/api/say', methods=['POST'])
+@api.route("/api/say", methods=["POST"])
 def sayRouteProcessor():
     global api
     return server.sayRequestProcessor(api)
 
 
 # server start
-if __name__ == '__main__':
+if __name__ == "__main__":
     api.run(debug=True)
