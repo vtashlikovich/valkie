@@ -20,3 +20,4 @@ python index.py
 Server is accessible via: *http://127.0.0.1:5000*
 
 ## Screenshot
+![Valke screen](https://github.com/drackon/valkie/blob/master/readme/valkie-screen.png)
